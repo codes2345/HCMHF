@@ -1,0 +1,79 @@
+#z-score(python)
+import pandas
+from pandas import read_excel
+from sklearn import preprocessing
+
+
+dataset = read_excel('D:\cine1.xlsx', header=0, index_col=0)
+values = dataset.values
+values = values.astype('float32') 
+
+data = preprocessing.scale(values)
+df=pandas.DataFrame(data) 
+
+df.columns=dataset.columns 
+
+df.to_excel ('D:/cine1z.xlsx',index=None)
+
+
+
+#ICC(python)
+import pingouin as pg
+import pandas as pd
+import numpy as np
+import os
+folderPath = "E:\cinerep"
+
+data_1 = pd.read_excel(os.path.join(folderPath,"repro1.xlsx"))
+data_2 = pd.read_excel(os.path.join(folderPath,"repro2.xlsx"))
+
+data_1.insert(0,"reader",np.ones(data_1.shape[0]))
+data_2.insert(0,"reader",np.ones(data_2.shape[0])*2)
+
+data_1.insert(0,"target",range(data_1.shape[0]))
+data_2.insert(0,"target",range(data_2.shape[0]))
+
+data = pd.concat([data_1,data_2]) # make a data frame like the test data
+
+excel=pd.DataFrame(columns=['ICC', 'CI95%', 'Description'])
+for i in range(1,1410):
+  icc = pg.intraclass_corr(data = data, targets = "name", raters = "reader",ratings = (str(i)+'a'))
+  # print(icc)
+  df = pd.DataFrame(icc, columns=['ICC', 'CI95%', 'Description'])
+  excel=excel.append(df)
+
+print(excel)
+excel.to_excel('E:\cinerep/ICC.xlsx',index=False)
+
+#SCC(R)
+library(caret)
+aa<- read.csv('D:/肥心/HCMmace/HF投稿/cineICCztrain.csv')
+corMatrix_GTV =  cor(aa, y = NULL, use = "ev",method = "spearman")
+highly_correlated_columns_GTV = findCorrelation(
+  corMatrix_GTV,
+  cutoff = 0.8,
+  verbose = FALSE,
+  names = FALSE,
+  exact = TRUE
+)
+DT_GTV <- aa[, -highly_correlated_columns_GTV]
+write.csv(DT_GTV, "D:/肥心/HCMmace/HF投稿/cinePCCztrain0.8.csv")
+
+
+#LASSO-Cox(R)
+library(survival)
+library (glmnet)
+mydata <- read.csv(file = "D:/cineSCCztrain0.8.csv",header = TRUE)
+mydata <- data.frame (mydata)
+x = as.matrix(mydata[ , 1:298])
+x <- scale(x, center=T,scale=T)
+y <- Surv(mydata$Time,mydata$Status==1)
+lasso.cox <- glmnet(x,y, family="cox", alpha=1)
+cvfit <- cv.glmnet(x, y, family = "cox", nfold=10, alpha=1)
+par(mai=c(1,1,1,1))
+plot (cvfit, xlab="Log(lambda)", cex.axis =1.2,cex.lab = 1.2)
+plot(la,xlab="lambda", cex.axis =1.2,cex.lab = 1.2,lwd=2,label=TRUE)
+abline(v=log(cvfit $ lambda.min),lwd=2, col="black")
+abline(v=log(cvfit $ lambda.1se),lwd=2, col="grey")
+box(which = "plot", col = "black", lwd = 2)
+coef(cvfit, s="lambda.min")
